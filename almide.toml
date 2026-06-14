@@ -1,0 +1,4 @@
+[package]
+name = "fizz_audio_leader_elector"
+version = "0.1.0"
+description = "Fizz audio leader elector — pick a single audio-playback leader among viewer tabs (prevent double playback). Keep the current leader if still eligible, else the first capable+open viewer. One Almide core, native + wasm."

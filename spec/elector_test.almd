@@ -1,0 +1,24 @@
+import self as el
+
+test "keep current leader if still eligible" {
+  assert_eq(el.elect(1, [2, 3, 3]), 1)   // 1 は eligible→維持
+  assert_eq(el.elect(2, [3, 3, 3]), 2)
+}
+test "re-elect first eligible when current invalid" {
+  assert_eq(el.elect(0 - 1, [2, 3, 3]), 1)   // 無し→最初の eligible
+  assert_eq(el.elect(0, [2, 2, 3]), 2)        // 0 は open のみ→次の eligible=2
+  assert_eq(el.elect(1, [3, 2, 3]), 0)        // 1 無効→最初の eligible=0
+}
+test "no eligible viewer → -1" {
+  assert_eq(el.elect(0 - 1, [2, 2, 2]), 0 - 1)   // open だが capable 無し
+  assert_eq(el.elect(0 - 1, [1, 1]), 0 - 1)       // capable だが open 無し
+  assert_eq(el.elect(0, []), 0 - 1)
+}
+test "prev out of range falls back to re-elect" {
+  assert_eq(el.elect(99, [3, 2]), 0)
+}
+test "capable_count" {
+  assert_eq(el.capable_count([3, 2, 3, 1]), 2)
+  assert_eq(el.is_eligible(3), true)
+  assert_eq(el.is_eligible(2), false)
+}

@@ -1,0 +1,20 @@
+// CLI (native) — デモ/確認。viewer flags (capable|open<<1) と現リーダーから新リーダーを出す。
+import self as el
+import json
+import value
+import int
+
+// flags: 0=none,1=capable,2=open,3=eligible
+local fn show(prev: Int, flags: List[Int]) -> Value = value.object([
+  ("prev", value.int(prev)),
+  ("leader", value.int(el.elect(prev, flags))),
+  ("capable", value.int(el.capable_count(flags))),
+])
+
+effect fn main() -> Unit = {
+  // 例: viewer0=operator(open のみ=2), viewer1=eligible(3), viewer2=eligible(3)
+  println(json.stringify(show(0 - 1, [2, 3, 3])))   // leader 無し→最初の eligible=1
+  println(json.stringify(show(1, [2, 3, 3])))        // 現 1 が eligible→維持
+  println(json.stringify(show(1, [2, 2, 3])))        // 1 が無効→次の eligible=2
+  println(json.stringify(show(0, [2, 2, 2])))        // eligible なし→ -1
+}

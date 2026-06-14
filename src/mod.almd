@@ -1,0 +1,42 @@
+// fizz_audio_leader_elector — viewer タブから音声再生リーダーを 1 つ選ぶ。
+//
+// 責務 (一行): viewer 集合の状態(各 viewer の capable / open)と現リーダーから、
+// 新しいリーダーの index を決める(二重再生防止)。
+//
+// 方針 (openaituber server.ts ensureAudioLeader と同一):
+//   - 現リーダーがまだ eligible (capable かつ open) なら**そのまま維持**
+//     (不要なリーダー切替→音声プツ切れを避ける)
+//   - 無効なら **最初の eligible viewer**、いなければ -1 (リーダー無し)
+//
+// WS の接続管理 / send は Node の I/O だが、「誰をリーダーにするか」という選出
+// ポリシーは純粋なのでここに集約=単一の正本。native と wasm の両方で同じ判定を使う。
+//
+// flags[i] の符号化: bit0 = audio-capable, bit1 = connection open。
+// eligible = 両方 = 3。
+
+import list
+
+let CAPABLE = 1
+let OPEN = 2
+let ELIGIBLE = 3   // CAPABLE | OPEN
+
+fn is_eligible(flag: Int) -> Bool = flag == ELIGIBLE
+
+local fn flag_at(flags: List[Int], i: Int) -> Int = list.get(flags, i) ?? 0
+
+// 最初の eligible viewer の index、いなければ -1。eligible = flag == ELIGIBLE なので
+// list.index_of で引ける(再帰ヘルパを使わない — 末尾再帰が TCO されると引数転送で
+// borrow が崩れる almide v0.27.6 のバグ #688 を踏むため)。
+local fn first_eligible(flags: List[Int]) -> Int = list.index_of(flags, ELIGIBLE) ?? (0 - 1)
+
+// 現リーダー prev (index、無しは -1) と viewer flags から新リーダー index を返す。
+// prev が今も eligible ならそのまま、そうでなければ最初の eligible、いなければ -1。
+fn elect(prev: Int, flags: List[Int]) -> Int = {
+  let n = list.len(flags)
+  if prev >= 0 and prev < n and is_eligible(flag_at(flags, prev)) then prev
+  else first_eligible(flags)
+}
+
+// eligible (capable かつ open) な viewer 数。ログ/診断用。
+fn capable_count(flags: List[Int]) -> Int =
+  list.fold(flags, 0, (acc, f) => if is_eligible(f) then acc + 1 else acc)

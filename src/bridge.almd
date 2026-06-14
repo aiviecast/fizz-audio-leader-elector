@@ -1,0 +1,30 @@
+// wasm — Node サーバの leader 選出から呼ぶ。
+//   elect_alloc(n) で n viewer ぶんの flag バッファ(1 byte/viewer: capable|open<<1)を
+//   線形メモリに確保 → JS が書く → elect(prev) が新リーダー index (Float、-1=無し) を返す。
+// codegen tree-shaking 対策で main から参照 (almide#440)。
+import self as el
+import bytes
+import float
+import int
+
+var g_flags: Bytes = bytes.new(0)
+
+@export(wasm, "elect_alloc")
+fn elect_alloc(n: Float) -> RawPtr = {
+  g_flags = bytes.new(float.to_int(n))
+  bytes.as_mut_ptr(g_flags)
+}
+
+@export(wasm, "elect")
+fn elect(prev: Float) -> Float =
+  int.to_float(el.elect(float.to_int(prev), bytes.to_list(g_flags)))
+
+@export(wasm, "capable_count")
+fn capable_count() -> Float = int.to_float(el.capable_count(bytes.to_list(g_flags)))
+
+effect fn main() -> Unit = {
+  let _a = elect_alloc(1.0)
+  let _b = elect(0.0)
+  let _c = capable_count()
+  ()
+}
