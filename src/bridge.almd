@@ -7,20 +7,20 @@ import bytes
 import float
 import int
 
-var g_flags: Bytes = bytes.new(0)
+var g_flags: Bytes = bytes.zeros(0)
 
 @export(wasm, "elect_alloc")
 fn elect_alloc(n: Float) -> RawPtr = {
-  g_flags = bytes.new(float.to_int(n))
+  g_flags = bytes.zeros(int.from_saturating(n))
   bytes.as_mut_ptr(g_flags)
 }
 
 @export(wasm, "elect")
 fn elect(prev: Float) -> Float =
-  int.to_float(el.elect(float.to_int(prev), bytes.to_list(g_flags)))
+  float.from(el.elect(int.from_saturating(prev), bytes.to_list(g_flags)))
 
 @export(wasm, "capable_count")
-fn capable_count() -> Float = int.to_float(el.capable_count(bytes.to_list(g_flags)))
+fn capable_count() -> Float = float.from(el.capable_count(bytes.to_list(g_flags)))
 
 effect fn main() -> Unit = {
   let _a = elect_alloc(1.0)
