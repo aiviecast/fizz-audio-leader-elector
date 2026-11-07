@@ -2,7 +2,6 @@
 import self as el
 import json
 import value
-import int
 
 // flags: 0=none,1=capable,2=open,3=eligible
 local fn show(prev: Int, flags: List[Int]) -> Value = value.object([

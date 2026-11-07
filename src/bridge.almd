@@ -1,30 +1,31 @@
 // wasm — Node サーバの leader 選出から呼ぶ。
-//   elect_alloc(n) で n viewer ぶんの flag バッファ(1 byte/viewer: capable|open<<1)を
-//   線形メモリに確保 → JS が書く → elect(prev) が新リーダー index (Float、-1=無し) を返す。
+//   elect_alloc(n)! で n viewer ぶんの flag バッファ(1 byte/viewer: capable|open<<1)を
+//   線形メモリに確保 → JS が書く → elect(prev)! が新リーダー index (Float、-1=無し) を返す。
 // codegen tree-shaking 対策で main から参照 (almide#440)。
 import self as el
 import bytes
+import ffi
 import float
 import int
 
-var g_flags: Bytes = bytes.new(0)
+var g_flags: Region = ffi.region(bytes.new())
 
-@export(wasm, "elect_alloc")
-fn elect_alloc(n: Float) -> RawPtr = {
-  g_flags = bytes.new(float.to_int(n))
-  bytes.as_mut_ptr(g_flags)
+@export(wasm, "elect_alloc", returns: address)
+effect fn elect_alloc(n: Float) -> Region = {
+  g_flags = ffi.alloc(int.from_saturating(n))!
+  g_flags
 }
 
 @export(wasm, "elect")
-fn elect(prev: Float) -> Float =
-  int.to_float(el.elect(float.to_int(prev), bytes.to_list(g_flags)))
+effect fn elect(prev: Float) -> Float =
+  float.from(el.elect(int.from_saturating(prev), bytes.to_list(ffi.to_bytes(g_flags)!)))
 
 @export(wasm, "capable_count")
-fn capable_count() -> Float = int.to_float(el.capable_count(bytes.to_list(g_flags)))
+effect fn capable_count() -> Float = float.from(el.capable_count(bytes.to_list(ffi.to_bytes(g_flags)!)))
 
 effect fn main() -> Unit = {
-  let _a = elect_alloc(1.0)
-  let _b = elect(0.0)
-  let _c = capable_count()
+  let _a = elect_alloc(1.0)!
+  let _b = elect(0.0)!
+  let _c = capable_count()!
   ()
 }
